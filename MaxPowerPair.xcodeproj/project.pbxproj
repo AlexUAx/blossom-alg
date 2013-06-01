@@ -28,6 +28,9 @@
 		FAAF19131759F1C400CF8BA4 /* MaxPowerPair */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MaxPowerPair; sourceTree = BUILT_PRODUCTS_DIR; };
 		FAAF19161759F1C400CF8BA4 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		FAAF19181759F1C400CF8BA4 /* MaxPowerPair.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = MaxPowerPair.1; sourceTree = "<group>"; };
+		FAAF191F1759F49400CF8BA4 /* Edge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Edge.h; sourceTree = "<group>"; };
+		FAAF1935175A030100CF8BA4 /* NodeLabel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NodeLabel.h; sourceTree = "<group>"; };
+		FAAF1936175A061200CF8BA4 /* PathState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PathState.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,6 +64,9 @@
 			isa = PBXGroup;
 			children = (
 				FAAF19161759F1C400CF8BA4 /* main.cpp */,
+				FAAF191F1759F49400CF8BA4 /* Edge.h */,
+				FAAF1935175A030100CF8BA4 /* NodeLabel.h */,
+				FAAF1936175A061200CF8BA4 /* PathState.h */,
 				FAAF19181759F1C400CF8BA4 /* MaxPowerPair.1 */,
 			);
 			path = MaxPowerPair;
