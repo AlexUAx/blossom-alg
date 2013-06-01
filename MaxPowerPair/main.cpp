@@ -13,6 +13,8 @@
 #include "PathState.h"
 #include "NodeLabel.h"
 
+#define undef -999
+
 using namespace std;
 
 
@@ -87,24 +89,24 @@ Edge *findNextEdge(vector<vector <EdgeState>> adjMatrix, vector<Edge*> inTree, v
     return NULL;        //if there's no any edge for the next step
 }
 
-int pairForNode(int node, vector<Edge*> edges)
+int pairForNode(int node, int usedNode, vector<Edge*> edges)
 //find adjacency node for a given node
 //vector<Edge*> edges - set of nodes for search
 //int node - node to search
 //return found node
 {
     for (int i = 0; i < edges.size(); i++) {    //for every edge in vector
-        if (edges[i]->start == node) {          //if the right edge is found
+        if (edges[i]->start == node && edges[i]->final != usedNode) {          //if the right edge is found
             return edges[i]->final;             //return adjacency node
         }
-        if (edges[i]->final == node) {          //same for reverse order
+        if (edges[i]->final == node && edges[i]->start != usedNode) {          //same for reverse order
             return edges[i]->start;
         }
     }
-    return NULL;                                //if nothing is found
+    return undef;                                //if nothing is found
 }
 
-PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, set<int>unusedNodes)
+PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, set<int>unusedNodes, vector<Edge*> &currentPath)
 //build alternating tree which could have augmenting path or odd cycle
 //vector<vector <EdgeState>> adjMatrix - adjacency matrix of the current graph
 //vector<Edge*> match - current set of matching edges
@@ -126,6 +128,7 @@ PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, s
             switch (nodes[currentEdge->final].state) {                              //check state of the edge's final node
                 case NodeState::external:
                     inTree.push_back(currentEdge);                                  //add node to alternating tree
+                    currentPath = inTree;
                     return oddCycle;                                                //reached an odd cycle
                     
                 case NodeState::internal:
@@ -135,9 +138,10 @@ PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, s
                 case NodeState::unused:
                     inTree.push_back(currentEdge);                                  //add edge to alternating tree
                     if (unusedNodes.find(currentEdge->final) != unusedNodes.end()) {//if final node of the current edge is not in the matching set
+                        currentPath = inTree;
                         return augmentingPath;                                      //augmenting path found
                     } else {                                                        //if final node of the current edge is in the matching set
-                        int adjToFinal = pairForNode(currentEdge->final, match);    //find adjacency node that form an edge from the matching set with current final node
+                        int adjToFinal = pairForNode(currentEdge->final, currentEdge->start, match);    //find adjacency node that form an edge from the matching set with current final node
                         
                         Edge *nextEdge = new Edge;                                  //create new edge
                         nextEdge->start = currentEdge->final;                       //record data
@@ -154,12 +158,17 @@ PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, s
             }
             
         } else {                //if edge is not exist
+            currentPath = inTree;
             return fullTree;    //hungarian tree is found
         }
     }
     return error;
 }
 
+/*set<int> maximalMatching()
+{
+    return;
+}*/
 
 vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
 //main function of the program
@@ -167,24 +176,58 @@ vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
 //vector<vector <int>> adjMatrix - adjacency matrix for current graph
 //each edge in matrix represented with its current state
 {
+    int stage = 0;
+    vector<vector<Edge*>> cycles;
+    vector<vector<Edge*>> matching;
     set<int> unusedNodes;           //nodes not in the matching set
     Edge *matchEdge = NULL;         //first edge in matching set
-    for (int i = 1; i < adjMatrix.size(); i++) {
-        if (!matchEdge && adjMatrix[0][i] == unmatched) {
+    for (int i = 0; i < adjMatrix.size(); i++) {
+        /*if (!matchEdge && adjMatrix[0][i] == unmatched) {
             matchEdge = new Edge;
             adjMatrix[0][i] = matched;
             adjMatrix[i][0] = matched;
             matchEdge->start = 0;
             matchEdge->final = i;
-        } else {
+        } else {*/
             unusedNodes.insert(i);
-        }
+       // }
     }
+    
     vector<Edge*> result;
-    result.push_back(matchEdge);
+    if (true) {
+        matchEdge = new Edge;
+        matchEdge->start = 1;
+        matchEdge->final = 3;
+        result.push_back(matchEdge);
+        matchEdge = new Edge;
+        matchEdge->start = 7;
+        matchEdge->final = 5;
+        result.push_back(matchEdge);
+        unusedNodes.erase(unusedNodes.find(1));
+        unusedNodes.erase(unusedNodes.find(3));
+        unusedNodes.erase(unusedNodes.find(7));
+        unusedNodes.erase(unusedNodes.find(5));
+        matching.push_back(result);
+    }
     
     
-    PathState state = buildTree(adjMatrix, result, unusedNodes);
+    vector<Edge*> treePath;
+    PathState state = buildTree(adjMatrix, result, unusedNodes, treePath);
+    switch (state) {
+        case augmentingPath:
+            
+            break;
+            
+        case oddCycle:
+            
+            break;
+            
+        case fullTree:
+            break;
+            
+        default:
+            break;
+    }
     
     return result;
 }
