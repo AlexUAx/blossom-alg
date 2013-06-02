@@ -12,7 +12,8 @@
 enum NodeState {
     internal,
     external,
-    unused
+    unused,
+    deadlock
 };
 
 struct NodeLabel {

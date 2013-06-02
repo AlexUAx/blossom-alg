@@ -33,7 +33,7 @@ vector<vector <EdgeState>> getEdgesList()
     int nodes;                                  //total amount of nodes
     int edges;                                  //total amount of edges
     
-    FILE *inFile = fopen("pair.txt", "r");      //file with graph data
+    FILE *inFile = fopen(fileName, "r");      //file with graph data
     if (inFile != NULL) {                       //if file is exist
         fscanf(inFile, "%d%d",&nodes,&edges);   //get nodes and edges count
         vector<vector<EdgeState>> matrix (nodes, vector<EdgeState> (nodes, noEdge));    //create adjacency matrix
@@ -72,6 +72,7 @@ Edge *findNextEdge(vector<vector <EdgeState>> adjMatrix, vector<Edge*> inTree, v
 //vector<vector <EdgeState>> adjMatrix - adjacency matrix of the current graph
 //vector<Edge*> inTree - edges in alternating tree
 //vector<Edge*> wrongEdges - edges which will not be used in the alternating tree
+//vector<NodeLabel> nodes - current status of every node in alternating tree
 //return an edge which will be the next edge in the alternating tree
 {
     for (int i = 0; i < nodes.size(); i++) {                //for every node in graph
@@ -106,6 +107,50 @@ int pairForNode(int node, int usedNode, vector<Edge*> edges)
     return undef;                                //if nothing is found
 }
 
+bool isConnected(Edge *edge, vector<Edge*> match)
+//check if the given edge is connected to the set of edges or is inside this set
+{
+    for (int i = 0; i < match.size(); i++) {
+        if (match[i]->start == edge->start || match[i]->start == edge->final || match[i]->final == edge->start || match[i]->final == edge->final) {
+            return true;
+        }
+    }
+    return false;
+}
+
+vector<Edge*> computeAugmentingPath(vector<Edge*> inTree, vector<Edge*> match)
+{
+    vector<Edge*> matchInPath;
+    for (int i = 0; i < inTree.size(); i++) {
+        if (edgeInSet(inTree[i]->start, inTree[i]->final, match)) {
+            matchInPath.push_back(inTree[i]);
+        }
+    }
+    int i;
+    for (i = 0; i < inTree.size(); i++) {
+        if (!isConnected(inTree[i], matchInPath)) {
+            vector<Edge*>isolatedEdges;
+            isolatedEdges.push_back(inTree[i]);
+            return isolatedEdges;
+        }
+    }
+    return inTree;
+}
+
+vector<Edge*> computeOddCycle(vector<Edge*> inTree, vector<Edge*> match)
+{
+    vector<Edge*> cycle;
+    cycle.push_back(*(inTree.end() - 1));
+    cycle.push_back(*(inTree.end() - 2));
+    for (int i = (int)inTree.size() - 3; i > 0; i++) {
+        cycle.push_back(inTree[i]);
+        if (inTree[i]->start == cycle[0]->start || inTree[i]->start == cycle[0]->final || inTree[i]->final == cycle[0]->start || inTree[i]->final == cycle[0]->final) {
+            break;
+        }
+    }
+    return cycle;
+}
+
 PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, set<int>unusedNodes, vector<Edge*> &currentPath)
 //build alternating tree which could have augmenting path or odd cycle
 //vector<vector <EdgeState>> adjMatrix - adjacency matrix of the current graph
@@ -126,9 +171,10 @@ PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, s
         Edge *currentEdge = findNextEdge(adjMatrix, inTree, wrongEdges, nodes);     //get an edge with start in external node
         if (currentEdge) {                                                          //if edge exist
             switch (nodes[currentEdge->final].state) {                              //check state of the edge's final node
+                case NodeState::deadlock:
                 case NodeState::external:
                     inTree.push_back(currentEdge);                                  //add node to alternating tree
-                    currentPath = inTree;
+                    currentPath = computeOddCycle(inTree, match);
                     return oddCycle;                                                //reached an odd cycle
                     
                 case NodeState::internal:
@@ -138,7 +184,7 @@ PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, s
                 case NodeState::unused:
                     inTree.push_back(currentEdge);                                  //add edge to alternating tree
                     if (unusedNodes.find(currentEdge->final) != unusedNodes.end()) {//if final node of the current edge is not in the matching set
-                        currentPath = inTree;
+                        currentPath = computeAugmentingPath(inTree, match);
                         return augmentingPath;                                      //augmenting path found
                     } else {                                                        //if final node of the current edge is in the matching set
                         int adjToFinal = pairForNode(currentEdge->final, currentEdge->start, match);    //find adjacency node that form an edge from the matching set with current final node
@@ -165,10 +211,140 @@ PathState buildTree(vector<vector <EdgeState>> adjMatrix, vector<Edge*> match, s
     return error;
 }
 
-/*set<int> maximalMatching()
+vector<vector <EdgeState>> generateNewMatrix(vector<vector <EdgeState>> oldMatrix, vector<Edge*> cycle)
 {
-    return;
-}*/
+    vector<vector <EdgeState>> matrix = oldMatrix;
+    vector<EdgeState> newRow(oldMatrix.size() + 1);
+    for (int i = 0; i < cycle.size(); i++) {
+        for (int ii = 0; ii < oldMatrix.size(); ii++) {
+            if (oldMatrix[cycle[i]->final][ii] != noEdge) {
+                newRow[ii] = oldMatrix[cycle[i]->final][ii];
+            }
+            if (oldMatrix[cycle[i]->start][ii] != noEdge) {
+                newRow[ii] = oldMatrix[cycle[i]->start][ii];
+            }
+        }
+    }
+    matrix.push_back(newRow);
+    
+    for (int i = 0; i < oldMatrix.size(); i++) {
+        matrix[i].push_back(newRow[i]);
+    }
+    
+    for (int i = 0; i < cycle.size(); i++) {
+        for (int ii = 0; ii < matrix.size(); ii++) {
+            matrix[cycle[i]->start][ii] = noEdge;
+            matrix[ii][cycle[i]->start] = noEdge;
+            matrix[cycle[i]->final][ii] = noEdge;
+            matrix[ii][cycle[i]->final] = noEdge;
+        }
+    }
+    return matrix;
+}
+
+vector<Edge*> generateNewMatching(vector<Edge*> oldMatching, vector<Edge*> cycle, int fakeNode)
+{
+    vector<Edge*> matching;
+    for (int i = 0; i < oldMatching.size(); i++) {
+        if (!edgeInSet(oldMatching[i]->start, oldMatching[i]->final, cycle)) {
+            Edge *fakeEdge = new Edge;
+            fakeEdge->start = undef;
+            fakeEdge->final = oldMatching[i]->final;
+            if (isConnected(fakeEdge, cycle)){
+                oldMatching[i]->final = fakeNode;
+            } else if (isConnected(oldMatching[i], cycle)) {
+                oldMatching[i]->start = fakeNode;
+            }
+            matching.push_back(oldMatching[i]);
+        }
+    }
+    return matching;
+}
+
+set<int> generateNewUnused(set<int> oldUnused, vector<Edge*> cycle)
+{
+    set<int> unused = oldUnused;
+    for (int i = 0; i < cycle.size(); i++) {
+        unused.erase(cycle[i]->final);
+        unused.erase(cycle[i]->start);
+    }
+    return unused;
+}
+
+void invertMatchingWithPath(vector<Edge*> path, vector<Edge*> &matching, set<int> &unused)
+{
+    for (int i = 0; i < path.size(); i++) {
+        unused.erase(path[i]->start);
+        unused.erase(path[i]->final);
+
+        if (!edgeInSet(path[i]->start, path[i]->final, matching)) {
+            matching.push_back(path[i]);
+        } else {
+            for (int ii = 0; ii < matching.size(); ii++) {
+                if ((matching[ii]->start == path[i]->start && matching[ii]->final == path[i]->final) ||
+                    (matching[ii]->start == path[i]->final && matching[ii]->final == path[i]->start)) {
+                    matching.erase(matching.begin() + ii);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void addCycleMatch(vector<Edge*>cycle, vector<Edge*> &match)
+{
+    for (int i = 0; i < cycle.size(); i++) {
+        if (!isConnected(cycle[i], match)) {
+            match.push_back(cycle[i]);
+        }
+    }
+}
+
+int nodeWithConnection(vector<Edge*>cycle, vector<vector <EdgeState>> adjMatrix, int node)
+{
+    for (int i = 0; i < cycle.size(); i++) {
+        if (adjMatrix[node][cycle[i]->start] != noEdge) {
+            return cycle[i]->start;
+        } else if (adjMatrix[node][cycle[i]->final] != noEdge) {
+            return cycle[i]->final;
+        }
+    }
+    return undef;
+}
+
+void updateCycleEdgesInMatch(vector<Edge*>cycle, vector<vector <EdgeState>> adjMatrix, vector<Edge*> &match)
+{
+    int inCycle;
+    int fakeNode = (int)adjMatrix.size();
+    for (int i = 0; i < match.size(); i++) {
+        if (match[i]->start == fakeNode) {
+            inCycle = nodeWithConnection(cycle, adjMatrix, match[i]->final);
+            match[i]->start = inCycle;
+            break;
+        } else if (match[i]->final == fakeNode) {
+            inCycle = nodeWithConnection(cycle, adjMatrix, match[i]->start);
+            match[i]->final = inCycle;
+            break;
+        }
+    }
+}
+
+void maximalMatch(vector<vector <EdgeState>> adjMatrix, vector<Edge*> &match, set<int> &unused)
+{
+    Edge *currEdge = new Edge;
+    for (int i = 0; i < adjMatrix.size(); i++) {
+        for (int ii = 0; ii < adjMatrix.size(); ii++) {
+            currEdge->start = i;
+            currEdge->final = ii;
+            if (adjMatrix[i][ii] != noEdge && !isConnected(currEdge, match)) {
+                match.push_back(currEdge);
+                currEdge = new Edge;
+                unused.erase(i);
+                unused.erase(ii);
+            }
+        }
+    }
+}
 
 vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
 //main function of the program
@@ -179,57 +355,64 @@ vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
     int stage = 0;
     vector<vector<Edge*>> cycles;
     vector<vector<Edge*>> matching;
+    vector<vector<vector <EdgeState>>> stagedAdjMatrix;
+    vector<set<int>> unused;
+    stagedAdjMatrix.push_back(adjMatrix);
+    
     set<int> unusedNodes;           //nodes not in the matching set
-    Edge *matchEdge = NULL;         //first edge in matching set
     for (int i = 0; i < adjMatrix.size(); i++) {
-        /*if (!matchEdge && adjMatrix[0][i] == unmatched) {
-            matchEdge = new Edge;
-            adjMatrix[0][i] = matched;
-            adjMatrix[i][0] = matched;
-            matchEdge->start = 0;
-            matchEdge->final = i;
-        } else {*/
-            unusedNodes.insert(i);
-       // }
+        unusedNodes.insert(i);
     }
     
-    vector<Edge*> result;
     if (true) {
-        matchEdge = new Edge;
-        matchEdge->start = 1;
-        matchEdge->final = 3;
-        result.push_back(matchEdge);
-        matchEdge = new Edge;
-        matchEdge->start = 7;
-        matchEdge->final = 5;
-        result.push_back(matchEdge);
-        unusedNodes.erase(unusedNodes.find(1));
-        unusedNodes.erase(unusedNodes.find(3));
-        unusedNodes.erase(unusedNodes.find(7));
-        unusedNodes.erase(unusedNodes.find(5));
+        vector<Edge*> result;
+        maximalMatch(adjMatrix, result, unusedNodes);
         matching.push_back(result);
+        vector<Edge*> fake;
+        cycles.push_back(fake);
+        unused.push_back(unusedNodes);
     }
     
-    
-    vector<Edge*> treePath;
-    PathState state = buildTree(adjMatrix, result, unusedNodes, treePath);
-    switch (state) {
-        case augmentingPath:
+    while (unused[stage].size() > 1) {
+        vector<Edge*> treePath;
+        PathState state = buildTree(stagedAdjMatrix[stage], matching[stage], unused[stage], treePath);
+        switch (state) {
+            case augmentingPath:
+                invertMatchingWithPath(treePath, matching[stage], unused[stage]);
+                break;
             
-            break;
+            case oddCycle: {
+                stage++;
+                cycles.push_back(treePath);
+                vector<vector<EdgeState>> newAdjMatrix = generateNewMatrix(stagedAdjMatrix[stage-1], cycles[stage]);
+                stagedAdjMatrix.push_back(newAdjMatrix);
+                matching.push_back(generateNewMatching(matching[stage-1], cycles[stage], (int)newAdjMatrix.size() - 1));
+                unused.push_back(generateNewUnused(unused[stage-1], cycles[stage]));
+                unused[stage].insert((int)stagedAdjMatrix[stage].size()-1);
+                break;
+            }
             
-        case oddCycle:
-            
-            break;
-            
-        case fullTree:
-            break;
-            
-        default:
-            break;
+            case fullTree: {
+                Edge *stEdge = treePath[0];
+                if (stEdge->start == treePath[1]->start || stEdge->start == treePath[1]->final) {
+                    unused[stage].erase(stEdge->final);
+                } else {
+                    unused[stage].erase(stEdge->start);
+                }
+                
+                break;
+            }
+                
+            default:
+                break;
+        }
     }
     
-    return result;
+    for (int i = stage; i > 0; i--) {
+        updateCycleEdgesInMatch(cycles[i], stagedAdjMatrix[i-1], matching[stage]);
+        addCycleMatch(cycles[i], matching[stage]);
+    }
+    return matching[stage];
 }
 
 void printEdges(vector<Edge*> edges)
@@ -237,7 +420,7 @@ void printEdges(vector<Edge*> edges)
 //vector<Edge*> edges - edge's data source
 {
     for (int i = 0; i < edges.size(); i++) {        //for every edge
-        cout << edges[i]->start + 1 << " " << edges[i]->final << endl;  //print start and final node
+        cout << edges[i]->start + 1 << " " << edges[i]->final + 1 << endl;  //print start and final node
     }
 }
 

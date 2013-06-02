@@ -222,6 +222,7 @@
 				FAAF191E1759F1C400CF8BA4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
