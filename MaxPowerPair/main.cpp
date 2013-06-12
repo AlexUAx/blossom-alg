@@ -104,7 +104,7 @@ int pairForNode(int node, int usedNode, vector<Edge*> edges)
     return undef;                                //if nothing is found
 }
 
-bool isConnected(Edge *edge, vector<Edge*> match)
+Edge* isConnected(Edge *edge, vector<Edge*> match)
 //check if the given edge is connected to the set of edges or is inside this set
 //Edge *edge - edge to search connection with
 //vector<Edge*> match - edges for search
@@ -113,10 +113,20 @@ bool isConnected(Edge *edge, vector<Edge*> match)
     for (int i = 0; i < match.size(); i++) {        //check for every edge in set
         //if given edge is connected to edge from the set
         if (match[i]->start == edge->start || match[i]->start == edge->final || match[i]->final == edge->start || match[i]->final == edge->final) {
-            return true;
+            return match[i];
         }
     }
-    return false;       //if there's no edge from set that connected to given edge
+    return NULL;       //if there's no edge from set that connected to given edge
+}
+
+void eraseEdge(Edge *edge, vector<Edge*> &edgesSet)
+{
+    for (int i = 0; i < edgesSet.size(); i++) {
+        if (edgesSet[i] == edge) {
+            edgesSet.erase(edgesSet.begin() + i);
+            break;
+        }
+    }
 }
 
 vector<Edge*> computeAugmentingPath(vector<Edge*> inTree, vector<Edge*> match)          //WARNING!!!! MUST BE UPDATED!!!
@@ -132,34 +142,27 @@ vector<Edge*> computeAugmentingPath(vector<Edge*> inTree, vector<Edge*> match)  
             matchInPath.push_back(inTree[i]);
         }
     }
-    int i;
-    for (i = 0; i < inTree.size(); i++) {   //for every edge from tree
-        //if edge is isolated from match nodes
-        if (!isConnected(inTree[i], matchInPath)) {
-            //augmenting path consist of isolated edge only
-            vector<Edge*>isolatedEdges;
-            isolatedEdges.push_back(inTree[i]); 
-            return isolatedEdges;
-        }
-    }
     
     int found = false;
     vector<Edge*> augmentingPath;
-    vector<Edge*> matchCopy(match);
     Edge *currEdge = inTree[inTree.size() -1];
     inTree.erase(inTree.end() -1);
     augmentingPath.push_back(currEdge);
     
     while (!found) {                              
-        Edge *fakeEdge = new Edge;
-        fakeEdge->start = currEdge->start;
-        fakeEdge->final = undef;
-        if (isConnected(fakeEdge, match)) {
-            
+        Edge *matchEdge = isConnected(currEdge, matchInPath);
+        if (matchEdge) {
+            augmentingPath.push_back(matchEdge);
+            eraseEdge(matchEdge, matchInPath);
+            eraseEdge(matchEdge, inTree);
+            currEdge = isConnected(matchEdge, inTree);
+            augmentingPath.push_back(currEdge);
+        } else {
+            found = true;
         }
     }
     
-    return inTree;
+    return augmentingPath;
 }
 
 vector<Edge*> computeOddCycle(vector<Edge*> inTree, vector<Edge*> match)
@@ -422,6 +425,29 @@ void maximalMatch(vector<vector <EdgeState>> adjMatrix, vector<Edge*> &match, se
     
 }
 
+void maximalMatch2(vector<vector <EdgeState>> adjMatrix, vector<Edge*> &match, set<int> &unused)
+//computing initial match from graph with empty match
+//add edges to match so that no one edge is connected to another
+//vector<vector <EdgeState>> adjMatrix - adjacency matrix of the current graph
+//vector<Edge*> &match - match edges / empty at input
+//set<int> &unused - set of edges which could be used in alternating tree / empty at input
+{
+    Edge *edge = new Edge;
+    edge->start = 1;
+    edge->final = 2;
+    match.push_back(edge);
+    edge = new Edge;
+    edge->start = 3;
+    edge->final = 6;
+    match.push_back(edge);
+    unused.erase(1);
+    unused.erase(2);
+    unused.erase(3);
+    unused.erase(6);
+
+    
+}
+
 vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
 //main function of the program
 //finds maximum matching as a vector of edges for a given graph which is represented as a adjacency matrix
@@ -441,7 +467,7 @@ vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
     }
     
     vector<Edge*> result;           //maximal match
-    maximalMatch(adjMatrix, result, unusedNodes);   //find maximal match
+    maximalMatch2(adjMatrix, result, unusedNodes);   //find maximal match
     matching.push_back(result);                     //set maximal match as stage 0 match
     vector<Edge*> fake;                             //empty set of edges
     cycles.push_back(fake);                         //empty cycle in stage 0
