@@ -425,29 +425,6 @@ void maximalMatch(vector<vector <EdgeState>> adjMatrix, vector<Edge*> &match, se
     
 }
 
-void maximalMatch2(vector<vector <EdgeState>> adjMatrix, vector<Edge*> &match, set<int> &unused)
-//computing initial match from graph with empty match
-//add edges to match so that no one edge is connected to another
-//vector<vector <EdgeState>> adjMatrix - adjacency matrix of the current graph
-//vector<Edge*> &match - match edges / empty at input
-//set<int> &unused - set of edges which could be used in alternating tree / empty at input
-{
-    Edge *edge = new Edge;
-    edge->start = 1;
-    edge->final = 2;
-    match.push_back(edge);
-    edge = new Edge;
-    edge->start = 3;
-    edge->final = 6;
-    match.push_back(edge);
-    unused.erase(1);
-    unused.erase(2);
-    unused.erase(3);
-    unused.erase(6);
-
-    
-}
-
 vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
 //main function of the program
 //finds maximum matching as a vector of edges for a given graph which is represented as a adjacency matrix
@@ -467,7 +444,7 @@ vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
     }
     
     vector<Edge*> result;           //maximal match
-    maximalMatch2(adjMatrix, result, unusedNodes);   //find maximal match
+    maximalMatch(adjMatrix, result, unusedNodes);   //find maximal match
     matching.push_back(result);                     //set maximal match as stage 0 match
     vector<Edge*> fake;                             //empty set of edges
     cycles.push_back(fake);                         //empty cycle in stage 0
