@@ -108,7 +108,7 @@ Edge* isConnected(Edge *edge, vector<Edge*> match)
 //check if the given edge is connected to the set of edges or is inside this set
 //Edge *edge - edge to search connection with
 //vector<Edge*> match - edges for search
-//return 'true' if there's a connection beetwen edge and set of edges
+//return pointer to the connected edge if there's a connection beetwen edge and set of edges
 {
     for (int i = 0; i < match.size(); i++) {        //check for every edge in set
         //if given edge is connected to edge from the set
@@ -120,11 +120,12 @@ Edge* isConnected(Edge *edge, vector<Edge*> match)
 }
 
 void eraseEdge(Edge *edge, vector<Edge*> &edgesSet)
+//delete given edge from the set of edges
 {
-    for (int i = 0; i < edgesSet.size(); i++) {
-        if (edgesSet[i] == edge) {
-            edgesSet.erase(edgesSet.begin() + i);
-            break;
+    for (int i = 0; i < edgesSet.size(); i++) {     //check every edge from set
+        if (edgesSet[i] == edge) {                  //if edge is found
+            edgesSet.erase(edgesSet.begin() + i);       //erase from set
+            break;                                  //stop looking forward
         }
     }
 }
@@ -135,6 +136,7 @@ vector<Edge*> computeAugmentingPath(vector<Edge*> inTree, vector<Edge*> match)  
 //vector<Edge*> inTree - edges in alternating tree
 //vector<Edge*> match - edges used in the match
 {
+    //copy match edges from tree to the new container
     vector<Edge*> matchInPath;      //match edges from alternating tree
     for (int i = 0; i < inTree.size(); i++) {   //for every edge from tree
         //if edge is in match set
@@ -145,20 +147,21 @@ vector<Edge*> computeAugmentingPath(vector<Edge*> inTree, vector<Edge*> match)  
     
     int found = false;
     vector<Edge*> augmentingPath;
-    Edge *currEdge = inTree[inTree.size() -1];
-    inTree.erase(inTree.end() -1);
+    Edge *currEdge = inTree[inTree.size() -1];      //start with the last edge of the tree
+                                                    //this edge must be in the final path
+    inTree.erase(inTree.end() -1);                  //every found edge will be removed from tree
     augmentingPath.push_back(currEdge);
     
-    while (!found) {                              
-        Edge *matchEdge = isConnected(currEdge, matchInPath);
-        if (matchEdge) {
+    while (!found) {                                //while there's a match edge with connection to current edge
+        Edge *matchEdge = isConnected(currEdge, matchInPath);   //find match edge connected to the current edge
+        if (matchEdge) {                            //if match edge exist
             augmentingPath.push_back(matchEdge);
             eraseEdge(matchEdge, matchInPath);
             eraseEdge(matchEdge, inTree);
-            currEdge = isConnected(matchEdge, inTree);
+            currEdge = isConnected(matchEdge, inTree);  //find edge connected to the match edge
             augmentingPath.push_back(currEdge);
-        } else {
-            found = true;
+        } else {            //if there's no match edge
+            found = true;       //we found augmenting path
         }
     }
     
