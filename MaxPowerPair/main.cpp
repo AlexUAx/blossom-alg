@@ -427,8 +427,6 @@ void maximalMatch(vector<vector <EdgeState>> adjMatrix, vector<Edge*> &match, se
             }
         }
     }
-    
-    
 }
 
 vector<Edge*> findMaximumMatching(vector<vector <EdgeState>> adjMatrix)
