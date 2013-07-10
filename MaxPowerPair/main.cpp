@@ -16,7 +16,7 @@
 using namespace std;
 
 vector<vector <EdgeState>> getEdgesList()
-//read data from file
+//read data from file 
 //first line of the file consist of two numbers (devided by single space): total number of nodes (N) and edges (M)
 //next M line has two numbers (in range 1 to N): start and final node of an edge for current graph
 //return adjacency matrix which has state of each edge
@@ -34,12 +34,15 @@ vector<vector <EdgeState>> getEdgesList()
     if (inFile != NULL) {                       //if file is exist
         fscanf(inFile, "%d%d",&nodes,&edges);   //get nodes and edges count
         vector<vector<EdgeState>> matrix (nodes, vector<EdgeState> (nodes, noEdge));    //create adjacency matrix
+        cout<<"Current connections:"<<endl;
         for (int i = 0; i < edges; i++) {       //scan file for every edge
             int st,en;                          //nodes of the current edge
             fscanf(inFile, "%d%d",&st,&en);     //read current edge's nodes
+            cout<<st<<" "<<en<<endl;
             matrix[st-1][en-1] = unmatched;     //set edge to "found and unused" state
             matrix[en-1][st-1] = unmatched;     //same for reversed edge
         }
+        cout<<endl;
         fclose(inFile);
         return matrix;
     } else {
@@ -130,7 +133,7 @@ void eraseEdge(Edge *edge, vector<Edge*> &edgesSet)
     }
 }
 
-vector<Edge*> computeAugmentingPath(vector<Edge*> inTree, vector<Edge*> match)          //WARNING!!!! MUST BE UPDATED!!!
+vector<Edge*> computeAugmentingPath(vector<Edge*> inTree, vector<Edge*> match)         
 //augmenting path handler
 //finds augmenting path from alternating tree
 //vector<Edge*> inTree - edges in alternating tree
@@ -512,14 +515,30 @@ void printEdges(vector<Edge*> edges)
 //print every edge in the given set
 //vector<Edge*> edges - edge's data source
 {
+    cout<<"Edges in match:"<<endl;
     for (int i = 0; i < edges.size(); i++) {        //for every edge
         cout << edges[i]->start + 1 << " " << edges[i]->final + 1 << endl;  //print start and final node
     }
+}
+
+void printList(vector < vector<EdgeState> > adjList)
+{
+    cout<<"Adjency list:"<<endl;
+    for (int i = 0; i<adjList.size(); i++) {
+        cout<<"nodes, adjecend to "<<i+1<<": ";
+        for (int j = 0 ; j < adjList[i].size(); j++) {
+            if(adjList[i][j]!= noEdge)
+                cout << j+1<<" ";
+        }
+        cout<<endl;
+    }
+    cout<<endl;
 }
 
 int main(int argc, const char * argv[])
 {
     vector<vector<EdgeState>> adjMatrix = getEdgesList();       //get adjacency matrix of the current graph
     vector<Edge*> matching = findMaximumMatching(adjMatrix);    //find set of edges which if form maximum matching
+    printList(adjMatrix);
     printEdges(matching);                                       //print every edge in the given set
 }
